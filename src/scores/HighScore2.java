@@ -1,19 +1,20 @@
 package scores;
 
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import javax.net.ssl.HttpsURLConnection;
 
 /**
  * This class is used to fetch and send the highscores on ThingSpeak.
  * @author Mehdi & Ana
  *
  */
-public class HighScore1
+public class HighScore2
 {
 	private URL url;
 	
@@ -21,7 +22,7 @@ public class HighScore1
 	 * Creates a HighScore object from the url pointing to the csv file containing the scores.
 	 * @param url The address of the file with the protocol. For example: "http://myserver.com/scores.csv" or whatever since the URL points to a csv file.
 	 */
-	public HighScore1(String url)
+	public HighScore2(String url)
 	{
 		try
 		{
@@ -36,7 +37,6 @@ public class HighScore1
 	
 	/**
 	 * Send a GET HTTP request to fetch the scores from the URL given to the object's constructor.
-	 * 
 	 * @return An ArrayList containing each line of the file except the csv header line
 	 */
 	public List<String> getScores()
@@ -46,7 +46,7 @@ public class HighScore1
 		
 		try
 		{
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+			HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
 			connection.setRequestMethod("GET");
 			input = new Scanner(connection.getInputStream());
 			
@@ -54,7 +54,11 @@ public class HighScore1
 			
 			input.nextLine();					//We get rid of the csv header line
 			while(input.hasNextLine())
-				result.add(input.nextLine());
+			{
+				String line = input.nextLine();
+				if(!line.isEmpty())
+					result.add(line);
+			}
 		}
 		catch(IOException e)
 		{
@@ -69,5 +73,34 @@ public class HighScore1
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * Extracts the ten best scores from the given(or less if there're less than ten scores).
+	 * @return An array containing the ten or less best players
+	 */
+	public BestPlayer[] tenBestScores(List<String> readScores)
+	{
+		BestPlayer[] allBest = new BestPlayer[10];
+		List<BestPlayer> playerRecords = parsePlayers(readScores);
+		Collections.sort(playerRecords, Collections.reverseOrder());
+		
+		for(int i = 0; i < playerRecords.size() && i < 10; i++)
+			allBest[i] = playerRecords.get(i);
+		
+		return allBest;
+	}
+	
+	private List<BestPlayer> parsePlayers(List<String> readScores)
+	{
+		ArrayList<BestPlayer> playerRecords = new ArrayList<BestPlayer>(readScores.size());
+		
+		for(String line : readScores)
+		{
+			String[] fields = line.split(",");
+			playerRecords.add(new BestPlayer(Integer.parseInt(fields[2]), fields[3]));
+		}
+		
+		return playerRecords;
 	}
 }
